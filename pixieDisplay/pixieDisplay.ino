@@ -1,5 +1,6 @@
 #include "Pixie.h"
 #include "Pixie_Icon_Pack.h"  // Required for built-in icons
+#include <avr/wdt.h>
 
 // Display Configuration
 #define NUM_PIXIES  8                     // Number of Pixie PCBs
@@ -12,7 +13,7 @@ Pixie pix(NUM_PIXIES, CLK_PIN, DATA_PIN); // Initialize the Pixie display
 unsigned long previousMillis = 0; // Stores the last update time
 unsigned long interval = 150;     // Interval between updates (ms)
 int state = 1;                    // Current animation state
-int dir = 0;                      // Direction of animation
+bool dir = 0;                      // Direction of animation
 
 // Buffer for Display and State Management
 static char buffer[DISPLAY_WIDTH + 1] = "";  // Display buffer (+1 for null terminator)
@@ -25,7 +26,7 @@ void setup() {
 
 void loop() {
   handleSerialInput(); // Process incoming serial data
-  
+
   // Execute corresponding display function
   if (currentState == "A") {
     A();
@@ -44,10 +45,7 @@ void handleSerialInput() {
 
     // Reset to state "A" if an empty message is received
     if (receivedData.length() == 0) {
-      currentState = "A";
-      receivedData.toCharArray(buffer, sizeof(buffer));
-      Serial.print("Buffer: "); Serial.println(buffer);
-      return;
+      reboot();
     }
 
     Serial.print("receivedData: ");
@@ -62,7 +60,7 @@ void handleSerialInput() {
       currentState = "C";
       Serial.println("got to C");
     }
-    
+
     pix.clear(); // Clear display before updating
     receivedData.toCharArray(buffer, sizeof(buffer));
     Serial.print("Buffer: "); Serial.println(buffer);
@@ -128,4 +126,10 @@ void displayC() {
   pix.show(); // Refresh display
 
   currentState = "A"; // Reset state after execution
+}
+
+void reboot() {
+  wdt_disable();
+  wdt_enable(WDTO_15MS);
+  while (1) {}
 }
